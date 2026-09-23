@@ -1,3 +1,4 @@
+var BUILD = '20260923-1056';
 /* KEI Board — the team's shared task board.
  * Tasks live in two SharePoint lists (see store.js); this file is the board
  * everyone looks at. Nothing is stored in the page itself, so what a person
