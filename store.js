@@ -24,8 +24,8 @@ var STORE = (function () {
   var TEAM = 'KEI Tasks', PERSONAL = 'Personal Tasks';
 
   /* The board's buckets are keys; the list shows readable names. */
-  var BUCKET_OUT = { tosort: 'To Sort', now: 'Now', today: 'Today', week: 'This Week',
-                     later: 'Later', someday: 'Some Day / Maybe' };
+  var BUCKET_OUT = { tosort: 'To Sort', now: 'Now', progress: 'In Progress / Waiting On',
+                     today: 'Today', week: 'This Week', later: 'Later', someday: 'Some Day / Maybe' };
   var BUCKET_IN = {};
   Object.keys(BUCKET_OUT).forEach(function (k) { BUCKET_IN[BUCKET_OUT[k]] = k; });
 

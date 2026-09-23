@@ -10,12 +10,12 @@
 var STATE = { v: 1, board: 'team', labels: [], lanes: ['Rory'], tasks: [], activity: [], personalLabels: null };
 var TITLE = 'KEI Team Board';
 var FONT_LINKS = '<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@400;600;700;800&family=Archivo:wght@400;500;600;700&family=Spline+Sans+Mono:wght@400;500;600&display=swap">';
-var BUCKETS = ['tosort', 'now', 'today', 'week', 'later', 'someday'];
-var BUCKET_NAME = { tosort: 'To Sort', now: 'Now', today: 'Today', week: 'This Week',
-                    later: 'Later', someday: 'Some Day / Maybe' };
+var BUCKETS = ['tosort', 'now', 'progress', 'today', 'week', 'later', 'someday'];
+var BUCKET_NAME = { tosort: 'To Sort', now: 'Now', progress: 'In Progress / Waiting On',
+                    today: 'Today', week: 'This Week', later: 'Later', someday: 'Some Day / Maybe' };
 /* short form for the picker on a task row, where space is tight */
-var BUCKET_SHORT = { tosort: 'To Sort', now: 'Now', today: 'Today', week: 'Week',
-                     later: 'Later', someday: 'Someday' };
+var BUCKET_SHORT = { tosort: 'To Sort', now: 'Now', progress: 'In Prog / Waiting',
+                     today: 'Today', week: 'Week', later: 'Later', someday: 'Someday' };
 /* buckets that existed before, and where their tasks go now */
 var BUCKET_WAS = { next: 'week', inbox: 'tosort' };
 
