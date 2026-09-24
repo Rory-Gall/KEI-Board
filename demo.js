@@ -41,7 +41,7 @@
     task('Check out the new path in the campground', 'Rory', 'someday', 'Personal')
   ];
   var settings = {
-    lanes: ['Rory', 'Anne', 'Cam', 'Allie', 'Contractors'],
+    lanes: ['Rory', 'Anne', 'Cam', 'Allie', 'Claude', 'Contractors'],
     labels: [{ name: 'CoN', hue: 200 }, { name: 'LLC', hue: 150 }, { name: 'HPWPS', hue: 260 },
              { name: 'BizDev', hue: 320 }, { name: 'Finances', hue: 45 }, { name: 'HR', hue: 15 },
              { name: 'Sensors', hue: 180 }, { name: 'Admin', hue: 280 }, { name: 'Personal', hue: 95 },
