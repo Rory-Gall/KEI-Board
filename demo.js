@@ -38,8 +38,21 @@
     task('Put a gutter on the shed', 'Contractors', 'later', 'House'),
     task('Wash and clean the motorcycle gear', 'Rory', 'tosort', 'Motorcycle'),
     task('Organize the flooring contract', 'Rory', 'now', 'House'),
-    task('Check out the new path in the campground', 'Rory', 'someday', 'Personal')
+    task('Check out the new path in the campground', 'Rory', 'someday', 'Personal'),
+    /* two KEI Board tasks: one team-visible, one private with a WORK label -
+       the case the Board view and the privacy rule in store.js exist for */
+    task("🏛 Board: Pick the five buyers you'll call before October 3", 'Rory', 'tosort', 'BizDev', false,
+         { by: 'KEI Board', src: 'KEI Board #demo1' }),
+    task("🏛 Board: Hold a short review with Cam before the winter layoff", 'Rory', 'tosort', 'HR', false,
+         { by: 'KEI Board', src: 'KEI Board #demo2' })
   ];
+  /* which list each demo task "lives" in, like the real store: personal labels,
+     the Contractors lane and the private board task are on the private list */
+  var PRIVATE_IDS = {};
+  tasks.forEach(function (t) {
+    if (['Personal', 'House', 'Motorcycle', 'Yard'].indexOf(t.label) >= 0 || t.lane === 'Contractors' ||
+        t.src === 'KEI Board #demo2') PRIVATE_IDS[t.id] = true;
+  });
   var settings = {
     lanes: ['Rory', 'Anne', 'Cam', 'Allie', 'Claude', 'Contractors'],
     labels: [{ name: 'CoN', hue: 200 }, { name: 'LLC', hue: 150 }, { name: 'HPWPS', hue: 260 },
@@ -83,7 +96,8 @@
     poll: function () { var out = pending; pending = []; return Promise.resolve(out); },
     setPersonalLabels: function () {},
     listFor: function () { return 'KEI Tasks'; },
-    canReadPersonal: function () { return true; }
+    listOf: function (id) { return PRIVATE_IDS[id] ? 'Personal Tasks' : 'KEI Tasks'; },
+    canReadPersonal: function () { return !/[?&]staff=1/.test(location.search); }   /* ?staff=1 = see it as staff */
   };
 
   /* Pretend someone else changed something, to check the board takes it in

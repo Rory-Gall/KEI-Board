@@ -118,7 +118,7 @@ var STORE = (function () {
       src: f.Source || '',
       comments: comments
     };
-    rowOf[t.id] = { list: listName, itemId: itemId };
+    rowOf[t.id] = { list: listName, itemId: itemId, label: t.label };
     return t;
   }
   var BAD_COMMENTS = [];   /* surfaced by load(), never swallowed */
@@ -179,6 +179,14 @@ var STORE = (function () {
   /* ---------- writing ---------- */
   function put(t) {
     var want = listFor(t), at = rowOf[t.id];
+    /* Nothing leaves the private list unless it is explicitly re-tagged from a
+       personal project to a work one. The KEI Board files pay, reviews, layoffs
+       and rates to the private list WITH work labels (file_to_list.py
+       "private": true), so re-deriving the list from the label on an ordinary
+       edit would publish them to staff. On 2026-09-28 all seven private board
+       tasks carried work labels (HR, Finances...) and a single drag or tick
+       would have moved them onto the list Cam and Allie read. */
+    if (at && at.list === PERSONAL && want === TEAM && personalLabels.indexOf(at.label) < 0) want = PERSONAL;
     var fields = toFields(t);
     /* A task that changed sides (e.g. tagged House) moves list: write it to the
        new one first, and only then remove the old row, so a failure halfway
@@ -190,12 +198,12 @@ var STORE = (function () {
     }
     if (!at) return create(want, fields, t.id).then(function () { return t; });
     return call('PATCH', SITE + '/lists/' + listId(at.list) + '/items/' + at.itemId + '/fields', fields)
-      .then(function () { return t; });
+      .then(function () { at.label = t.label; return t; });
   }
   function create(listName, fields, id) {
     return call('POST', SITE + '/lists/' + listId(listName) + '/items', { fields: fields })
       .then(function (made) {
-        rowOf[id] = { list: listName, itemId: made.id };
+        rowOf[id] = { list: listName, itemId: made.id, label: fields.Label };
         return made;
       });
   }
@@ -256,6 +264,9 @@ var STORE = (function () {
     load: load, put: put, remove: remove, putSetting: putSetting, addActivity: addActivity, poll: poll,
     setPersonalLabels: function (list) { if (list && list.length) personalLabels = list.slice(); },
     listFor: listFor,
+    /* which list a task actually lives in - for board tasks that, not the
+       label, says whether staff can see it */
+    listOf: function (id) { return rowOf[id] ? rowOf[id].list : null; },
     canReadPersonal: function () { return personalReadable; }
   };
 })();

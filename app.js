@@ -1,4 +1,4 @@
-var BUILD = '20260924-0908';
+var BUILD = '20260928-1611';
 /* KEI Board — the team's shared task board.
  * Tasks live in two SharePoint lists (see store.js); this file is the board
  * everyone looks at. Nothing is stored in the page itself, so what a person
@@ -26,10 +26,20 @@ var BUCKET_WAS = { next: 'week', inbox: 'tosort' };
 var PERSONAL_LABELS = (STATE.personalLabels && STATE.personalLabels.length)
   ? STATE.personalLabels : ['Personal', 'House'];
 function isPersonal(t) { return PERSONAL_LABELS.indexOf(t.label) >= 0; }
+/* Tasks the KEI Board files each morning (the Revenue Generator session). Some go
+   to the private list WITH work labels - pay, reviews, layoffs, rates - so for
+   these the list they live in, not the label, says whether staff can see them. */
+function isBoard(t) { return t.by === 'KEI Board'; }
+function onPrivateList(t) { return STORE.listOf ? STORE.listOf(t.id) === 'Personal Tasks' : isPersonal(t); }
+/* The Board view shows the private board items, so only people who can open the
+   private list (Rory, Anne) get the tab. Staff never see it. */
+function boardViewAllowed() { return !!(STORE.canReadPersonal && STORE.canReadPersonal()); }
 function inScope(t) {
   var s = PREFS.scope || 'all';
-  if (s === 'personal') return isPersonal(t);
-  if (s === 'work') return !isPersonal(t);
+  if (s === 'board' && !boardViewAllowed()) s = 'all';
+  if (s === 'board') return isBoard(t);
+  if (s === 'personal') return isPersonal(t) && !isBoard(t);           /* Personal stays personal */
+  if (s === 'work') return isBoard(t) ? !onPrivateList(t) : !isPersonal(t);
   return true;
 }
 
@@ -721,8 +731,11 @@ function boardHTML() {
 function filtersHTML() {
   var h = '<div class="filters">';
   var sc = PREFS.scope || 'all';
+  if (sc === 'board' && !boardViewAllowed()) sc = 'all';
+  var scopes = [['all', 'All'], ['work', 'Work'], ['personal', 'Personal']];
+  if (boardViewAllowed()) scopes.push(['board', 'Board']);
   h += '<span class="seg">';
-  [['all', 'All'], ['work', 'Work'], ['personal', 'Personal']].forEach(function (o) {
+  scopes.forEach(function (o) {
     h += '<button class="segb' + (sc === o[0] ? ' on' : '') + '" data-scope="' + o[0] + '">' + o[1] + '</button>';
   });
   h += '</span><span class="fsep"></span>';
