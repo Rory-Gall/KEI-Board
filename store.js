@@ -36,7 +36,11 @@ var STORE = (function () {
   var personalReadable = true;
 
   function listId(name) { return CONFIG.lists[name]; }
+  /* HR items outside the staff's own lanes are ABOUT staff (reviews, hours checks,
+     discipline) and live on the private list - same rule as file_to_list.py. */
+  var STAFF_LANES = ['Cam', 'Allie'];
   function listFor(t) {
+    if (t.label === 'HR' && STAFF_LANES.indexOf(t.lane) < 0) return PERSONAL;
     return (personalLabels.indexOf(t.label) >= 0 || personalLanes.indexOf(t.lane) >= 0) ? PERSONAL : TEAM;
   }
 

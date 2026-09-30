@@ -1,4 +1,4 @@
-var BUILD = '20260928-1611';
+var BUILD = '20260930-0824';
 /* KEI Board — the team's shared task board.
  * Tasks live in two SharePoint lists (see store.js); this file is the board
  * everyone looks at. Nothing is stored in the page itself, so what a person
@@ -103,7 +103,30 @@ function openCount(lane) {
     return t.lane === lane && !t.done && inScope(t);
   }).length;
 }
-function act(text) {
+/* The Activity feed lives on the team site - staff can read it - so it must never
+   name a task they cannot see. A quoted title belonging to a private task (on the
+   private list, personal-tagged, or in the Contractors lane) becomes "a private
+   task", and a comment typed after the colon is dropped with it. On 2026-09-30
+   about 200 entries were found naming private tasks - board items about staff
+   reviews and the winter layoff among them - and were scrubbed. */
+function privateTask(t) {
+  if (!t) return false;
+  if (STORE.listOf && STORE.listOf(t.id) === 'Personal Tasks') return true;
+  return isPersonal(t) || t.lane === 'Contractors';
+}
+function privateSafe(text, t) {
+  var m = /“([^”]*)”/.exec(text);
+  if (!m) return text;
+  var q = m[1].replace(/ +$/, '');
+  var priv = t ? privateTask(t)
+               : STATE.tasks.some(function (x) { return x.t && x.t.indexOf(q) === 0 && privateTask(x); });
+  if (!priv) return text;
+  var rest = text.slice(m.index + m[0].length);
+  if (rest.charAt(0) === ':') rest = '';
+  return text.slice(0, m.index) + 'a private task' + rest;
+}
+function act(text, t) {
+  text = privateSafe(text, t);
   var e = { id: String(Date.now()) + '_' + Math.floor(Math.random() * 100000),
             who: WHO || 'Someone', at: nowISO(), text: text };
   STATE.activity.unshift(e);
@@ -1202,7 +1225,7 @@ document.addEventListener('click', function (e) {
       mutate(function () {
         var t = byId(id5); if (!t) return;
         STATE.tasks = STATE.tasks.filter(function (x) { return x.id !== id5; });
-        act('deleted “' + t.t.slice(0, 40) + '”');
+        act('deleted “' + t.t.slice(0, 40) + '”', t);   /* already gone from STATE.tasks - pass it */
         VIEW.open = null;
       });
     });
