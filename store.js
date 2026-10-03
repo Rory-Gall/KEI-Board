@@ -24,6 +24,9 @@ var STORE = (function () {
   var TEAM = 'KEI Tasks', PERSONAL = 'Personal Tasks';
 
   /* The board's buckets are keys; the list shows readable names. */
+  /* 'later' is stored as "Later" but SHOWN as "Next 30 Days" (app.js BUCKET_NAME,
+     renamed 2026-10-03). Do not change the stored value: every row, every script
+     and every stale browser tab reads and writes "Later". */
   var BUCKET_OUT = { tosort: 'To Sort', now: 'Now', progress: 'In Progress / Waiting On',
                      today: 'Today', week: 'This Week', later: 'Later', someday: 'Some Day / Maybe' };
   var BUCKET_IN = {};
@@ -169,8 +172,18 @@ var STORE = (function () {
       });
       return Promise.all([markDelta(TEAM), personalReadable ? markDelta(PERSONAL) : null])
         .then(function () {
+          /* Two different tasks on one id: the app finds tasks by id, so they
+             would act on each other. It happened twice (the filing script minted
+             the same id for two tasks in one run) - report it, never hide it. */
+          var all = r[0].concat(r[1]), seen = {}, clashes = [];
+          all.forEach(function (t) {
+            if (seen.hasOwnProperty(t.id)) {
+              clashes.push('“' + seen[t.id].slice(0, 30) + '” and “' + (t.t || '').slice(0, 30) + '”');
+            } else { seen[t.id] = t.t || ''; }
+          });
           return {
-            tasks: r[0].concat(r[1]),
+            tasks: all,
+            clashes: clashes,
             settings: settings,
             activity: activity,
             personalReadable: personalReadable,

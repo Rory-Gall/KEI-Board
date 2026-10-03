@@ -1,4 +1,4 @@
-var BUILD = '20260930-0824';
+var BUILD = '20261003-1143';
 /* KEI Board — the team's shared task board.
  * Tasks live in two SharePoint lists (see store.js); this file is the board
  * everyone looks at. Nothing is stored in the page itself, so what a person
@@ -12,11 +12,15 @@ var STATE = { v: 1, board: 'team', labels: [], lanes: ['Rory'], tasks: [], activ
 var TITLE = 'KEI Team Board';
 var FONT_LINKS = '<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@400;600;700;800&family=Archivo:wght@400;500;600;700&family=Spline+Sans+Mono:wght@400;500;600&display=swap">';
 var BUCKETS = ['tosort', 'now', 'progress', 'today', 'week', 'later', 'someday'];
+/* 'later' is SHOWN as "Next 30 Days" (Rory, 2026-10-03: what is happening this
+   month; after that it is Some Day / Maybe). Only the label changed: the key is
+   still 'later' and SharePoint still stores "Later" (store.js BUCKET_OUT), so
+   stale browser tabs and every script keep working. */
 var BUCKET_NAME = { tosort: 'To Sort', now: 'Now', progress: 'In Progress / Waiting On',
-                    today: 'Today', week: 'This Week', later: 'Later', someday: 'Some Day / Maybe' };
+                    today: 'Today', week: 'This Week', later: 'Next 30 Days', someday: 'Some Day / Maybe' };
 /* short form for the picker on a task row, where space is tight */
 var BUCKET_SHORT = { tosort: 'To Sort', now: 'Now', progress: 'In Prog / Waiting',
-                     today: 'Today', week: 'Week', later: 'Later', someday: 'Someday' };
+                     today: 'Today', week: 'Week', later: '30 Days', someday: 'Someday' };
 /* buckets that existed before, and where their tasks go now */
 var BUCKET_WAS = { next: 'week', inbox: 'tosort' };
 
@@ -417,6 +421,11 @@ function loadAll() {
     if (data.badComments && data.badComments.length) {
       FAILMSG = 'some comments could not be read (' + data.badComments.length + ') - tell Claude';
     }
+    /* Two tasks on one id act on each other: ticking one changes its twin, and the
+       card can show open while its detail says Reopen. Say so, loudly. */
+    if (data.clashes && data.clashes.length) {
+      FAILMSG = 'two tasks share one id and will act on each other (' + data.clashes.join('; ') + ') - tell Claude';
+    }
     render();
     startPolling();
   });
@@ -699,7 +708,7 @@ function cardHTML(t) {
   var canDrag = !t.done && dragEnabled();
   var h = '<div class="' + cls + '" data-tid="' + t.id + '"' + (canDrag ? ' data-drag="' + t.id + '"' : '') + '>';
   h += '<label class="ckwrap" data-ckwrap><input type="checkbox" class="ck" data-done="' + t.id + '"' + (t.done ? ' checked' : '') + ' aria-label="Mark done"></label>';
-  if (canDrag) h += '<span class="grab" title="Drag to move (Now / Next / Later)">&#10303;</span>';
+  if (canDrag) h += '<span class="grab" title="Drag to move to another section">&#10303;</span>';
   h += '<div class="t" data-tedit="' + t.id + '" title="' + esc(t.t) + ' (click to edit)">' + esc(t.t) + '</div>';
   h += '<div class="meta">';
   /* label: pick it right on the row */
@@ -709,7 +718,7 @@ function cardHTML(t) {
   h += '</select>';
   /* Now / Next / Later: pick it right on the row */
   if (!t.done) {
-    h += '<select class="bktsel' + (t.bucket === 'now' ? ' now' : '') + '" data-edit-bucket-inline="' + t.id + '" title="Now / Next / Later">';
+    h += '<select class="bktsel' + (t.bucket === 'now' ? ' now' : '') + '" data-edit-bucket-inline="' + t.id + '" title="Which section">';
     BUCKETS.forEach(function (b) { h += '<option value="' + b + '"' + (t.bucket === b ? ' selected' : '') + '>' + (BUCKET_SHORT[b] || BUCKET_NAME[b]) + '</option>'; });
     h += '</select>';
   }
