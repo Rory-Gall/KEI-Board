@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>KEI Team Board</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@400;600;700;800&family=Archivo:wght@400;500;600;700&family=Spline+Sans+Mono:wght@400;500;600&display=swap">
+<style>
+  :root{color-scheme:light dark}
+  body{margin:0;font:13.5px/1.4 Archivo,system-ui,sans-serif;background:#EEF2EF;color:#1B2A24}
+  @media (prefers-color-scheme:dark){body{background:#0F1613;color:#E4ECE7}}
+  #selftest{max-width:800px;margin:24px auto;padding:0 20px;font-family:"Spline Sans Mono",monospace;font-size:12.5px}
+  #selftest div{padding:2px 0;border-bottom:1px solid rgba(128,128,128,.2)}
+  .ok{color:#0F766E}.bad{color:#B3372F;font-weight:700}
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<script src="config.js"></script>
+<script src="auth.js"></script>
+<script src="store.js"></script>
+<script>
+/* Normally: load the board, which signs in and fills itself from the lists.
+   With ?selftest=1: run the connection checks instead, so the plumbing can be
+   proved without touching the board. */
+(function () {
+  function loadScript(src, then) {
+    var s = document.createElement('script');
+    s.src = src;
+    s.onload = then || null;
+    document.body.appendChild(s);
+  }
+  if (/[?&]demo=1/.test(location.search)) {
+    /* Stand-in data, no Microsoft: for checking the interface itself. */
+    loadScript('demo.js', function () { loadScript('app.js'); });
+    return;
+  }
+  if (!/[?&]selftest=1/.test(location.search)) {
+    loadScript('app.js');
+    return;
+  }
+
+  var app = document.getElementById('app');
+  function line(txt, ok) {
+    var d = document.createElement('div');
+    d.className = ok === undefined ? '' : (ok ? 'ok' : 'bad');
+    d.textContent = (ok === undefined ? '' : (ok ? 'PASS  ' : 'FAIL  ')) + txt;
+    document.getElementById('selftest').appendChild(d);
+    return ok;
+  }
+
+  AUTH.start().then(function (who) {
+    if (!who.signedIn) { AUTH.signIn(); return; }
+    app.innerHTML = '<div id="selftest"><div>Signed in as ' + who.name + ' (' + who.email + ')</div></div>';
+    var made = { id: Date.now() * 1000 + 7, t: 'SELF-TEST from the browser (delete me)', lane: 'Rory',
+                 bucket: 'today', label: 'Admin', notes: 'written by index.html selftest', done: false,
+                 doneAt: null, created: new Date().toISOString(), by: who.name, src: '', comments: [] };
+    var failures = 0;
+    function check(txt, ok) { if (!line(txt, ok)) failures++; }
+
+    STORE.load().then(function (data) {
+      check('read the lists: ' + data.tasks.length + ' task(s), ' +
+            Object.keys(data.settings).length + ' setting(s), ' + data.activity.length + ' activity line(s)',
+            data.tasks.length > 0);
+      check('personal list readable: ' + data.personalReadable +
+            ' (expected true for Rory and Anne, false for staff)', true);
+      if (data.badComments.length) check('comments that would not parse: ' + data.badComments.join(', '), false);
+      return STORE.put(made);
+    }).then(function () {
+      return STORE.load();
+    }).then(function (data) {
+      var back = data.tasks.filter(function (t) { return t.id === made.id; })[0];
+      check('wrote a task and read it back', !!back);
+      if (back) {
+        ['t', 'lane', 'bucket', 'label', 'notes', 'done', 'by'].forEach(function (k) {
+          check('  ' + k + ' survived the round trip (' + JSON.stringify(back[k]) + ')', back[k] === made[k]);
+        });
+      }
+      return STORE.poll();
+    }).then(function (changes) {
+      check('change feed answered (' + changes.length + ' change(s) since load)', true);
+      return STORE.remove(made);
+    }).then(function () {
+      return STORE.load();
+    }).then(function (data) {
+      var still = data.tasks.some(function (t) { return t.id === made.id; });
+      check('deleted the test task', !still);
+      line('');
+      line(failures ? failures + ' CHECK(S) FAILED' : 'ALL CHECKS PASSED', !failures);
+    }).catch(function (e) {
+      check('unexpected error: ' + (e && e.message), false);
+    });
+  }).catch(function (e) {
+    app.innerHTML = '<div id="selftest"><div class="bad">sign-in failed: ' + (e && e.message) + '</div></div>';
+  });
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,194 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>KEI phone test</title>
+<style>
+  :root { --navy: #00364B; --ink: #13212b; --ink2: #4a5965; --line: #d5dde3; --ok: #17703d; --okbg: #e5f3ea; --bad: #b3261e; --badbg: #fbe8e6; --warn: #8f5400; --warnbg: #fdf0d8; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #eef2f5; color: var(--ink); font: 16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  main { max-width: 620px; margin: 0 auto; padding: 16px 16px 60px; }
+  h1 { margin: 6px 0 4px; font-size: 24px; color: var(--navy); }
+  .lede { margin: 0 0 14px; color: var(--ink2); }
+  section { background: #fff; border: 1px solid var(--line); border-radius: 14px; padding: 14px 16px 16px; margin: 0 0 14px; }
+  h2 { margin: 0 0 6px; font-size: 18px; }
+  p { margin: 0 0 10px; }
+  .path { font-weight: 600; color: var(--navy); }
+  button { display: block; width: 100%; font: 600 17px/1.2 inherit; color: #fff; background: var(--navy); border: 0; border-radius: 12px; padding: 15px 16px; margin: 6px 0 0; }
+  button:disabled { opacity: .45; }
+  button.second { background: #fff; color: var(--navy); border: 2px solid var(--navy); }
+  .out { margin-top: 10px; border-radius: 10px; padding: 10px 12px; font-size: 15px; overflow-wrap: anywhere; white-space: pre-wrap; background: #f3f6f8; color: var(--ink2); }
+  .out.ok { background: var(--okbg); color: var(--ok); font-weight: 600; }
+  .out.bad { background: var(--badbg); color: var(--bad); font-weight: 600; }
+  .out.warn { background: var(--warnbg); color: var(--warn); font-weight: 600; }
+  #result { font: 600 14px/1.5 ui-monospace, Consolas, monospace; background: #13212b; color: #e9f2f6; border-radius: 12px; padding: 12px 14px; white-space: pre-wrap; overflow-wrap: anywhere; }
+  .small { font-size: 14px; color: var(--ink2); }
+</style>
+</head>
+<body>
+<main>
+  <h1>KEI phone test</h1>
+  <p class="lede">Four short steps. This page holds no KEI data and sends nothing anywhere. It only finds out what this phone can do with OneDrive.</p>
+
+  <section>
+    <h2>Step 1. Pick the test file</h2>
+    <p>Tap the button. In the file chooser, open the menu and choose <b>OneDrive</b>, then go to<br>
+       <span class="path">KEI Shared &rsaquo; _KEI Field Tools &rsaquo; Field Sheet &rsaquo; phone test</span><br>
+       and tap <b>to-do test.json</b>.</p>
+    <p class="small">If OneDrive is not offered, or you cannot reach KEI Shared, cancel. That is a result too.</p>
+    <button id="b1" type="button">Pick the test file</button>
+    <input id="f1" type="file" hidden>
+    <div class="out" id="o1">Not tried yet.</div>
+  </section>
+
+  <section>
+    <h2>Step 2. Choose the folder once</h2>
+    <p>Tap the button and choose the same <span class="path">phone test</span> folder in OneDrive, then allow it.</p>
+    <button id="b2" type="button">Choose the folder</button>
+    <div class="out" id="o2">Not tried yet.</div>
+  </section>
+
+  <section>
+    <h2>Step 3. Save a test file into that folder</h2>
+    <p>Needs step 2 first. It writes one small text file into the folder.</p>
+    <button id="b3" type="button">Save a test file</button>
+    <div class="out" id="o3">Not tried yet.</div>
+  </section>
+
+  <section>
+    <h2>Step 4. Does the phone remember the folder?</h2>
+    <p>Close this page completely (swipe Chrome away), open the same address again, and look here.</p>
+    <button id="b4" class="second" type="button" hidden>Allow the folder again</button>
+    <div class="out" id="o4">Checked when the page opens.</div>
+  </section>
+
+  <section>
+    <h2>Send this to Claude</h2>
+    <p class="small">When you have done all four, take a screenshot of this box, or tap Copy and paste it into the chat.</p>
+    <div id="result"></div>
+    <button id="copy" class="second" type="button">Copy</button>
+    <button id="reset" class="second" type="button">Start over</button>
+  </section>
+</main>
+
+<script>
+"use strict";
+var KEY = "kei-phone-test-v1";
+var R = {};
+try { R = JSON.parse(localStorage.getItem(KEY) || "{}") || {}; } catch (e) { R = {}; }
+function $(id) { return document.getElementById(id); }
+function save() { try { localStorage.setItem(KEY, JSON.stringify(R)); } catch (e) {} show(); }
+function out(id, cls, text) { var o = $(id); o.className = "out" + (cls ? " " + cls : ""); o.textContent = text; }
+function err(e) { return (e && e.name ? e.name : "Error") + (e && e.message ? ": " + e.message : ""); }
+function chrome() { var m = /Chrome\/(\d+)/.exec(navigator.userAgent); return m ? m[1] : "?"; }
+function android() { var m = /Android (\d+)/.exec(navigator.userAgent); return m ? m[1] : "?"; }
+function installed() { return (window.matchMedia && matchMedia("(display-mode: standalone)").matches) ? "yes" : "no"; }
+function show() {
+  $("result").textContent = "KEI PHONE TEST v1\n" +
+    "android " + android() + " | chrome " + chrome() + " | opened as app: " + installed() + "\n" +
+    "can choose a folder: " + (window.showDirectoryPicker ? "yes" : "NO") + " | can pick with new picker: " + (window.showOpenFilePicker ? "yes" : "no") + "\n" +
+    "1 pick file:   " + (R.s1 || "not tried") + "\n" +
+    "2 folder:      " + (R.s2 || "not tried") + "\n" +
+    "3 save file:   " + (R.s3 || "not tried") + "\n" +
+    "4 remembered:  " + (R.s4 || "not checked");
+}
+
+/* a tiny store for the folder handle */
+function idb() {
+  return new Promise(function (res, rej) {
+    var r = indexedDB.open("kei-phone-test", 1);
+    r.onupgradeneeded = function () { r.result.createObjectStore("h"); };
+    r.onsuccess = function () { res(r.result); };
+    r.onerror = function () { rej(r.error); };
+  });
+}
+function put(k, v) { return idb().then(function (db) { return new Promise(function (res, rej) { var tx = db.transaction("h", "readwrite"); tx.objectStore("h").put(v, k); tx.oncomplete = function () { res(); }; tx.onerror = function () { rej(tx.error); }; }); }); }
+function get(k) { return idb().then(function (db) { return new Promise(function (res, rej) { var q = db.transaction("h").objectStore("h").get(k); q.onsuccess = function () { res(q.result); }; q.onerror = function () { rej(q.error); }; }); }); }
+var dir = null;
+
+/* step 1 */
+$("b1").onclick = function () { $("f1").value = ""; $("f1").click(); };
+$("f1").onchange = function () {
+  var f = $("f1").files && $("f1").files[0];
+  if (!f) { R.s1 = "cancelled"; out("o1", "warn", "Cancelled: no file picked."); save(); return; }
+  f.text().then(function (t) {
+    var msg = "";
+    try { msg = (JSON.parse(t) || {}).test || ""; } catch (e) {}
+    if (msg) { R.s1 = "OK (" + f.name + ")"; out("o1", "ok", "Read the file: " + f.name + "\nIt says: " + msg); }
+    else { R.s1 = "read " + f.name + " but it is not the test file"; out("o1", "warn", "Read " + f.name + " (" + f.size + " bytes), but it is not the test file."); }
+    save();
+  }).catch(function (e) { R.s1 = "FAILED " + err(e); out("o1", "bad", "Could not read the file.\n" + err(e)); save(); });
+};
+
+/* step 2 */
+function describe(d) {
+  var names = [], it = d.values(), n = 0;
+  function step() { return it.next().then(function (x) { if (x.done) return; n++; if (names.length < 6) names.push(x.value.name); return step(); }); }
+  return step().then(function () { return { n: n, names: names }; });
+}
+$("b2").onclick = function () {
+  if (!window.showDirectoryPicker) { R.s2 = "NOT SUPPORTED on this Chrome"; out("o2", "bad", "This phone's Chrome cannot choose a folder."); save(); return; }
+  window.showDirectoryPicker({ mode: "readwrite", id: "kei-phone-test" }).then(function (d) {
+    dir = d;
+    return put("dir", d).then(function () { return describe(d); }).then(function (x) {
+      var has = x.names.indexOf("to-do test.json") >= 0;
+      R.s2 = "OK folder '" + d.name + "', " + x.n + " items" + (has ? ", test file seen" : ", TEST FILE NOT SEEN");
+      out("o2", has ? "ok" : "warn", "Folder chosen: " + d.name + "\n" + x.n + " items: " + x.names.join(", ") + (has ? "" : "\nThe test file is not in it: is it the phone test folder?"));
+      save();
+    });
+  }).catch(function (e) { R.s2 = (e && e.name === "AbortError" ? "cancelled" : "FAILED " + err(e)); out("o2", e && e.name === "AbortError" ? "warn" : "bad", (e && e.name === "AbortError" ? "Cancelled." : "Could not choose the folder.") + "\n" + err(e)); save(); });
+};
+
+/* step 3 */
+$("b3").onclick = function () {
+  if (!dir) { out("o3", "warn", "Do step 2 first (or step 4's button, if the page was reopened)."); return; }
+  var d = new Date(), p = function (n) { return (n < 10 ? "0" : "") + n; };
+  var name = "written by the phone " + d.getFullYear() + "-" + p(d.getMonth() + 1) + "-" + p(d.getDate()) + " " + p(d.getHours()) + p(d.getMinutes()) + p(d.getSeconds()) + ".txt";
+  dir.getFileHandle(name, { create: true }).then(function (fh) { return fh.createWritable(); })
+    .then(function (w) { return w.write("KEI phone test. Written " + d.toString()).then(function () { return w.close(); }); })
+    .then(function () { R.s3 = "OK (" + name + ")"; out("o3", "ok", "Saved: " + name + "\nClaude can now look for it in OneDrive."); save(); })
+    .catch(function (e) { R.s3 = "FAILED " + err(e); out("o3", "bad", "Could not save a file into the folder.\n" + err(e)); save(); });
+};
+
+/* step 4: on opening the page */
+function check4() {
+  get("dir").then(function (d) {
+    if (!d) { out("o4", "", "No folder has been chosen on this phone yet. Do step 2, then close and reopen the page."); return; }
+    if (!d.queryPermission) { R.s4 = "kept the folder, cannot ask about permission"; out("o4", "warn", "The folder was kept, but this Chrome cannot say whether it is still allowed."); save(); return; }
+    return d.queryPermission({ mode: "readwrite" }).then(function (st) {
+      if (st === "granted") {
+        dir = d;
+        return describe(d).then(function (x) { R.s4 = "YES, no question asked (" + x.n + " items read)"; out("o4", "ok", "Yes. The folder '" + d.name + "' was remembered and is still allowed: " + x.n + " items read with no question asked."); save(); });
+      }
+      R.s4 = "kept, but it asks again (" + st + ")";
+      out("o4", "warn", "The folder was kept, but the phone wants to be asked again. Tap the button.");
+      $("b4").hidden = false;
+      $("b4").onclick = function () {
+        d.requestPermission({ mode: "readwrite" }).then(function (st2) {
+          if (st2 === "granted") { dir = d; R.s4 = "kept; allowed again with one tap"; out("o4", "ok", "Allowed again with one tap. Step 3 will work now."); }
+          else { R.s4 = "kept; NOT allowed again (" + st2 + ")"; out("o4", "bad", "Not allowed (" + st2 + ")."); }
+          save();
+        }).catch(function (e) { R.s4 = "kept; asking again FAILED " + err(e); out("o4", "bad", err(e)); save(); });
+      };
+      save();
+    });
+  }).catch(function (e) { R.s4 = "FAILED " + err(e); out("o4", "bad", "Could not check.\n" + err(e)); save(); });
+}
+
+$("copy").onclick = function () {
+  var t = $("result").textContent;
+  if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(t).then(function () { $("copy").textContent = "Copied"; }, function () { $("copy").textContent = "Could not copy: screenshot it"; });
+  else $("copy").textContent = "Could not copy: screenshot it";
+};
+$("reset").onclick = function () { R = {}; try { localStorage.removeItem(KEY); } catch (e) {} put("dir", null).then(function () { location.reload(); }, function () { location.reload(); }); };
+
+if (R.s1) out("o1", /^OK/.test(R.s1) ? "ok" : "warn", "Last time: " + R.s1);
+if (R.s2) out("o2", /^OK/.test(R.s2) ? "ok" : "warn", "Last time: " + R.s2);
+if (R.s3) out("o3", /^OK/.test(R.s3) ? "ok" : "warn", "Last time: " + R.s3);
+show();
+check4();
+</script>
+</body>
+</html>
