@@ -1,4 +1,4 @@
-var BUILD = '20261113-2139';
+var BUILD = '20261116-1045';
 /* KEI Board — the team's shared task board.
  * Tasks live in two SharePoint lists (see store.js); this file is the board
  * everyone looks at. Nothing is stored in the page itself, so what a person
@@ -540,7 +540,7 @@ var CSS = [
 '.banner.warn{background:var(--now-soft)}',
 /* quick add */
 '.qa{display:flex;gap:6px;align-items:center;padding:6px 12px 2px;flex-wrap:wrap}',
-'.qa input{flex:1;min-width:180px;padding:6px 10px;border:1px solid var(--line);border-radius:8px;background:var(--surface);font-size:13px}',
+'.qa input{flex:1 1 100%;min-width:180px;padding:6px 10px;border:1px solid var(--line);border-radius:8px;background:var(--surface);font-size:13px}',
 '.qa input::placeholder{color:var(--muted)}',
 '.qa .to{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.07em}',
 '.pbtn{padding:8px 13px;border-radius:9px;background:var(--surface);border:1px solid var(--line);font-weight:600;font-size:13px}',
@@ -797,6 +797,9 @@ function filtersHTML() {
   return h;
 }
 
+/* The input takes the whole first line, so Add and the person buttons sit on the line
+   below, starting under its LEFT end - next to where you type. They used to trail
+   the input, which on a wide screen put them ~1600 px away (Rory, 2026-11-16). */
 function quickAddHTML() {
   var h = '<div class="qa"><input data-qa placeholder="Type a task and press Enter&hellip;" maxlength="300">';
   h += '<button class="pbtn primary" data-qadd-sort title="Add to your own To Sort">Add</button>';
