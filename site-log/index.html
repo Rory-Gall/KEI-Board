@@ -1,0 +1,234 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>KEI Site Log</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=Source+Sans+3:wght@400;600;700&display=swap">
+<style>
+/* Compact on purpose (2026-11-13): the site and the start and end times only.
+   The list keeps the old log's review columns; this page doesn't show them. */
+:root{--navy:#123a5a;--ink:#1c2b33;--muted:#5b6b75;--line:#dde4e8;--bg:#f4f7f8;--todo:#b3372f;--todobg:#fbecea}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.4 "Source Sans 3","Segoe UI",sans-serif}
+.wrap{max-width:760px;margin:0 auto;padding:20px 16px 50px}
+.eyebrow{font:600 12px/1 Archivo,sans-serif;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin:0}
+h1{font:700 28px/1.15 Archivo,"Segoe UI",sans-serif;margin:6px 0 14px;color:var(--navy)}
+.banner{border-radius:6px;padding:9px 13px;margin:0 0 12px;font-weight:600}
+.banner.err{background:var(--todobg);color:var(--todo);border:1px solid #f0c9c4}
+.banner.demo{background:#fff6e5;color:#8a5a00;border:1px solid #f3dcae}
+.bar{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 8px}
+.bar input,.bar select{padding:7px 10px;border:1px solid var(--line);border-radius:6px;font:inherit;background:#fff;color:var(--ink)}
+.bar input{flex:1;min-width:160px}
+.btn{border:0;border-radius:6px;background:var(--navy);color:#fff;padding:7px 13px;font:600 15px/1.3 inherit;cursor:pointer}
+.btn.ghost{background:#fff;color:var(--navy);border:1px solid var(--line)}
+.count{color:var(--muted);margin:0 0 10px;font-size:13.5px}
+.day{display:grid;grid-template-columns:118px 1fr;gap:10px;background:#fff;border:1px solid var(--line);border-radius:6px;margin:0 0 6px;padding:7px 12px}
+.date{font:600 13.5px/1.6 Archivo,sans-serif;color:var(--muted)}
+.v{display:grid;grid-template-columns:96px 1fr;gap:8px;line-height:1.6}
+.t{font-variant-numeric:tabular-nums;color:var(--muted)}
+.s{color:var(--navy);font-weight:600}
+.empty{color:var(--muted);padding:26px 0;text-align:center}
+dialog{border:1px solid var(--line);border-radius:10px;padding:18px;max-width:440px;width:calc(100% - 32px)}
+dialog h2{font:700 19px/1.2 Archivo,sans-serif;color:var(--navy);margin:0 0 12px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.grid label{display:flex;flex-direction:column;font-size:13px;color:var(--muted);gap:3px}
+.grid label.wide{grid-column:1/-1}
+.grid input{padding:7px 9px;border:1px solid var(--line);border-radius:6px;font:inherit;color:var(--ink)}
+.row2{display:flex;gap:8px;justify-content:flex-end;margin-top:12px}
+.signin{background:#fff;border:1px solid var(--line);border-radius:8px;padding:20px}
+@media(max-width:520px){.day{grid-template-columns:1fr;gap:2px}.v{grid-template-columns:92px 1fr}}
+</style>
+</head>
+<body>
+<main class="wrap">
+  <p class="eyebrow">Kootenay Environmental Innovations</p>
+  <h1>Site Log</h1>
+  <div id="msg"></div>
+  <div id="app"></div>
+</main>
+
+<dialog id="add">
+  <form method="dialog" id="addform">
+    <h2>Add a visit</h2>
+    <div class="grid">
+      <label class="wide">Site<input name="Site" list="sites" required></label>
+      <label class="wide">Date<input type="date" name="VisitDate" required></label>
+      <label>Start<input type="time" name="Arrival" required></label>
+      <label>End<input type="time" name="Departure" required></label>
+    </div>
+    <div class="row2"><button class="btn ghost" value="cancel" formnovalidate>Cancel</button><button class="btn" value="save">Save</button></div>
+  </form>
+</dialog>
+<datalist id="sites"></datalist>
+
+<script src="config.js"></script>
+<script src="auth.js"></script>
+<script>
+(function () {
+  'use strict';
+  var DEMO = /[?&]demo=1\b/.test(location.search);
+  var GRAPH = 'https://graph.microsoft.com/v1.0';
+  var ITEMS = '/sites/' + CONFIG.siteId + '/lists/' + CONFIG.siteLogList + '/items';
+  var items = [], who = null, filters = { q: '', owner: '' };
+  var app = document.getElementById('app'), msg = document.getElementById('msg');
+
+  function esc(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+  var ownerName = {};   // one spelling per client, taken from the list itself: this public file names no clients
+  function owner(f) {
+    var raw = ((f.Owner || '').trim() || (f.Site || '').split('_')[0] || '').trim();
+    var key = raw.toUpperCase();
+    if (key && !ownerName[key]) ownerName[key] = raw;
+    return key ? ownerName[key] : '';
+  }
+  function shout(text) {
+    msg.innerHTML = text ? '<div class="banner err">' + esc(text) + '</div>'
+      : (DEMO ? '<div class="banner demo">Demo: made-up visits. Nothing here is saved anywhere.</div>' : '');
+    if (text) window.scrollTo(0, 0);
+  }
+
+  /* ------------------------------------------------ storage (SharePoint list "Site Log" on the KEI Tasks site) */
+  function call(method, url, body) {
+    if (DEMO && method !== 'GET' && /[?&]fail=1\b/.test(location.search)) return Promise.reject(new Error('demo: saving is switched off'));
+    if (DEMO) return Promise.resolve(demoStore(method, body));
+    return AUTH.token().then(function (tok) {
+      var opt = { method: method, headers: { Authorization: 'Bearer ' + tok, Accept: 'application/json' } };
+      if (body !== undefined) { opt.headers['Content-Type'] = 'application/json'; opt.body = JSON.stringify(body); }
+      return fetch(url.indexOf('https://') === 0 ? url : GRAPH + url, opt);
+    }).then(function (r) {
+      if (r.status === 204) return null;
+      return r.json().then(function (j) {
+        if (!r.ok) throw new Error((j.error && j.error.message) || ('HTTP ' + r.status));
+        return j;
+      });
+    });
+  }
+  function loadAll() {
+    var out = [];
+    function page(url) {
+      return call('GET', url).then(function (j) {
+        (j.value || []).forEach(function (it) { out.push({ id: it.id, f: it.fields || {} }); });
+        return j['@odata.nextLink'] ? page(j['@odata.nextLink']) : out;
+      });
+    }
+    return page(ITEMS + '?$expand=fields($select=VisitDate,Arrival,Departure,Site,Owner)&$top=999');
+  }
+
+  /* ------------------------------------------------ drawing: one row per day, one line per visit */
+  function shown() {
+    var q = filters.q.toLowerCase();
+    return items.filter(function (it) {
+      if (filters.owner && owner(it.f) !== filters.owner) return false;
+      return !q || ((it.f.Site || '') + ' ' + (it.f.VisitDate || '')).toLowerCase().indexOf(q) >= 0;
+    }).sort(function (a, b) {
+      return (b.f.VisitDate || '').localeCompare(a.f.VisitDate || '') || (a.f.Arrival || '').localeCompare(b.f.Arrival || '');
+    });
+  }
+  function dayName(d) {
+    if (!/^\d{4}-\d\d-\d\d$/.test(d)) return d || 'No date';
+    return new Date(d + 'T12:00:00').toLocaleDateString('en-CA', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
+  }
+  function draw() {
+    var owners = {};
+    items.forEach(function (it) { var o = owner(it.f); if (o) owners[o] = 1; });
+    var list = shown(), days = [], byDay = {};
+    list.forEach(function (it) {
+      var d = it.f.VisitDate || '';
+      if (!byDay[d]) { byDay[d] = []; days.push(d); }
+      byDay[d].push(it);
+    });
+    var html = '<div class="bar"><input type="search" id="q" placeholder="Search site or date…" value="' + esc(filters.q) + '">' +
+      '<select id="owner"><option value="">All clients</option>' + Object.keys(owners).sort().map(function (o) {
+        return '<option' + (o === filters.owner ? ' selected' : '') + '>' + esc(o) + '</option>'; }).join('') + '</select>' +
+      '<button type="button" class="btn" id="addbtn">Add a visit</button></div>' +
+      '<p class="count">' + list.length + ' of ' + items.length + ' visits' +
+      (who ? ' · ' + esc(who.name || who.email) + ' · <a href="#" id="signout">sign out</a>' : '') + '</p>';
+    if (!list.length) html += '<p class="empty">No visits match.</p>';
+    days.forEach(function (d) {
+      html += '<div class="day"><div class="date">' + esc(dayName(d)) + '</div><div>' + byDay[d].map(function (it) {
+        return '<div class="v"><span class="t">' + esc((it.f.Arrival || '?') + '–' + (it.f.Departure || '?')) + '</span>' +
+          '<span class="s">' + esc(it.f.Site || '(no site written)') + '</span></div>';
+      }).join('') + '</div></div>';
+    });
+    app.innerHTML = html;
+    var sites = {};
+    items.forEach(function (it) { if (it.f.Site) sites[it.f.Site] = 1; });
+    document.getElementById('sites').innerHTML = Object.keys(sites).sort().map(function (s) { return '<option value="' + esc(s) + '">'; }).join('');
+  }
+
+  app.addEventListener('input', function (e) {
+    if (e.target.id !== 'q') return;
+    filters.q = e.target.value; var pos = e.target.selectionStart; draw();
+    var q = document.getElementById('q'); q.focus(); q.setSelectionRange(pos, pos);
+  });
+  app.addEventListener('change', function (e) { if (e.target.id === 'owner') { filters.owner = e.target.value; draw(); } });
+  app.addEventListener('click', function (e) {
+    if (e.target.id === 'addbtn') {
+      form.reset();
+      form.VisitDate.value = new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+      dlg.showModal();
+    }
+    if (e.target.id === 'signout') { e.preventDefault(); AUTH.signOut(); location.reload(); }
+  });
+
+  var dlg = document.getElementById('add'), form = document.getElementById('addform');
+  /* saved on submit, which fires at once (a dialog's 'close' event can arrive late in a background tab) */
+  form.addEventListener('submit', function (e) {
+    if (!e.submitter || e.submitter.value !== 'save') return;
+    var f = {};
+    ['VisitDate', 'Arrival', 'Departure', 'Site'].forEach(function (k) { f[k] = (form[k].value || '').trim(); });
+    if (!f.VisitDate || !f.Site) { shout('A visit needs a site and a date: not saved.'); return; }
+    if (f.Arrival && f.Departure && f.Departure < f.Arrival) { shout('The end time is before the start time: not saved.'); return; }
+    f.Title = f.Site;
+    f.Owner = f.Site.split('_')[0] || '';
+    f.Who = who ? (who.name || who.email) : '';
+    f.Source = 'Website';
+    call('POST', ITEMS, { fields: f }).then(function (made) {
+      items.push({ id: made.id, f: (made && made.fields) || f }); shout(''); draw();
+    }, function (err) { shout('NOT SAVED: the visit to ' + f.Site + ' on ' + f.VisitDate + '. ' + err.message); });
+  });
+
+  /* ------------------------------------------------ demo (?demo=1): made-up visits, kept in memory */
+  var demoRows = null, demoNext = 1000;
+  function demoStore(method, body) {
+    if (!demoRows) {
+      var S = ['DEMO_Bear Creek Upper', 'DEMO_Bear Creek Lower', 'TEST_Fox Lake', 'TEST_Otter Falls', 'DEMO_Elk Flats'];
+      demoRows = [];
+      for (var i = 0; i < 12; i++) demoRows.push({ id: String(i + 1), fields: {
+        VisitDate: new Date(2026, 10, 12 - Math.floor(i / 3)).toISOString().slice(0, 10),
+        Arrival: ['09:00', '11:30', '13:15'][i % 3], Departure: ['10:10', '12:40', '14:30'][i % 3],
+        Site: S[i % S.length], Owner: S[i % S.length].split('_')[0] } });
+    }
+    if (method === 'GET') return { value: demoRows };
+    if (method === 'POST') { var r = { id: String(demoNext++), fields: body.fields }; demoRows.push(r); return r; }
+    return null;
+  }
+
+  /* ------------------------------------------------ start */
+  function begin() {
+    app.innerHTML = '<p class="empty">Loading…</p>';
+    return loadAll().then(function (rows) { items = rows; shout(''); draw(); }, function (err) {
+      if (err.message === AUTH.EXPIRED) return signInBox();
+      app.innerHTML = '';
+      shout('The Site Log could not be loaded: ' + err.message + '. Nothing is shown rather than a partial list.');
+    });
+  }
+  function signInBox() {
+    app.innerHTML = '<div class="signin"><p style="margin-top:0">Sign in with your KEI Microsoft account to see the Site Log.</p>' +
+      '<button type="button" class="btn" id="go">Sign in with Microsoft</button></div>';
+    document.getElementById('go').onclick = function () { AUTH.signIn(); };
+  }
+  if (DEMO) { shout(''); begin(); return; }
+  AUTH.start().then(function (s) {
+    if (!s.signedIn) return signInBox();
+    who = AUTH.who();
+    return begin();
+  }, function (err) { signInBox(); shout('Sign-in failed: ' + err.message); });
+})();
+</script>
+</body>
+</html>
