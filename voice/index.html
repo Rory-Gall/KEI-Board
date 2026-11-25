@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#11171c">
+<title>KEI Voice</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<style>
+  :root {
+    --bg: #f3f5f6; --panel: #ffffff; --ink: #17212b; --muted: #5b6874; --line: #d9e0e5;
+    --rec: #d23f1f; --rec-soft: #fbe9e3; --ok: #1f7a55; --wait: #8a5a00; --bad: #b42318;
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #11171c; --panel: #182129; --ink: #e6ecf0; --muted: #9aa8b4; --line: #2a3540;
+            --rec: #ff6a45; --rec-soft: #3a2018; --ok: #5cc795; --wait: #f0c060; --bad: #ff8a80; color-scheme: dark; }
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 16px/1.45 system-ui, "Segoe UI", Roboto, sans-serif;
+         -webkit-tap-highlight-color: transparent; }
+  main { min-height: 100%; max-width: 520px; margin: 0 auto; display: flex; flex-direction: column; gap: 18px;
+         padding-top: max(18px, env(safe-area-inset-top)); padding-bottom: max(18px, env(safe-area-inset-bottom));
+         padding-left: max(16px, env(safe-area-inset-left)); padding-right: max(16px, env(safe-area-inset-right)); }
+  header { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+  h1 { margin: 0; font-size: 20px; letter-spacing: -0.01em; }
+  #build { font-size: 11px; color: var(--muted); }
+  .stage { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; min-height: 340px; }
+  #rec { width: min(72vw, 300px); aspect-ratio: 1; border-radius: 50%; border: 6px solid var(--rec); background: var(--panel);
+         color: var(--ink); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px;
+         font: inherit; cursor: pointer; touch-action: manipulation; user-select: none; transition: background .15s, transform .08s; }
+  #rec:active { transform: scale(.97); }
+  #rec .dot { width: 34%; aspect-ratio: 1; border-radius: 50%; background: var(--rec); transition: border-radius .15s, width .15s; }
+  #rec.on { background: var(--rec-soft); }
+  #rec.on .dot { width: 26%; border-radius: 14%; animation: pulse 1.4s ease-in-out infinite; }
+  @keyframes pulse { 50% { opacity: .55; } }
+  #recLabel { font-size: 18px; font-weight: 600; }
+  #timer { font: 600 30px/1 ui-monospace, "Cascadia Mono", Consolas, monospace; font-variant-numeric: tabular-nums; min-height: 30px; }
+  #meter { width: min(72vw, 300px); height: 8px; border-radius: 4px; background: var(--line); overflow: hidden; }
+  #level { height: 100%; width: 0; background: var(--rec); transition: width .08s linear; }
+  #status { margin: 0; text-align: center; color: var(--muted); min-height: 2.9em; }
+  #alert { margin: 0; padding: 10px 12px; border-radius: 8px; border-left: 4px solid var(--bad); background: var(--panel); color: var(--ink); }
+  #signin { align-self: center; font: inherit; font-weight: 600; padding: 12px 18px; border-radius: 10px; border: 1px solid var(--line);
+            background: var(--panel); color: var(--ink); cursor: pointer; }
+  #recentWrap h2 { margin: 0 0 6px; font-size: 13px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+  #recent { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+  #recent li { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px;
+               display: flex; justify-content: space-between; gap: 10px; font-size: 14px; }
+  #recent .state { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 45%; }
+  #recent li.ok .state { color: var(--ok); }
+  #recent li.wait .state { color: var(--wait); }
+  #recent li.warn .state, #recent li.bad .state { color: var(--bad); }
+  button:focus-visible { outline: 3px solid var(--rec); outline-offset: 3px; }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<main>
+  <header><h1>KEI Voice</h1><span id="build"></span></header>
+  <p id="alert" role="alert" hidden></p>
+  <div class="stage">
+    <button id="rec" type="button" aria-pressed="false">
+      <span class="dot" aria-hidden="true"></span>
+      <span id="recLabel">Tap to talk</span>
+      <span id="timer" aria-live="off"></span>
+    </button>
+    <div id="meter" hidden><div id="level"></div></div>
+    <p id="status" role="status" aria-live="polite"></p>
+    <button id="signin" type="button" hidden>Sign in with your KEI Microsoft account</button>
+  </div>
+  <section id="recentWrap" hidden><h2>Recent</h2><ol id="recent"></ol></section>
+</main>
+<script src="config.js"></script>
+<script src="send.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
