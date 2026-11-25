@@ -154,7 +154,7 @@
       var mr = new MediaRecorder(stream, opts);
       var started = Date.now();
       var r = { mr: mr, stream: stream, id: VOICE.newMemoId(started), seq: 0, started: started,
-                mime: mr.mimeType || mime || 'audio/webm', writes: [] };
+                mime: mr.mimeType || mime || 'audio/webm', writes: [], hiddenMs: 0, hiddenAt: 0 };
       REC = r;
       mr.ondataavailable = function (e) {
         if (!e.data || !e.data.size) return;
@@ -171,6 +171,7 @@
         mr.start(2000);           /* a piece every 2 s: a killed app loses at most 2 s */
         meterOn(r);
         lockScreen();
+        document.body.classList.add('recording');   /* black page: costs the phone's screen almost nothing */
         buzz(40);
         paint();
       });
@@ -198,17 +199,26 @@
     r.stream.getTracks().forEach(function (t) { t.stop(); });
     meterOff(r);
     unlockScreen();
+    document.body.classList.remove('recording');
     var ms = Date.now() - r.started;
+    if (r.hiddenAt) { r.hiddenMs += Date.now() - r.hiddenAt; r.hiddenAt = 0; }
+    var offS = Math.round(r.hiddenMs / 1000);
     Promise.all(r.writes).then(function () {
       if (r.writeError) throw r.writeError;
       return VOICE.chunksOf(r.id);
     }).then(function (blobs) {
       var blob = new Blob(blobs, { type: r.mime.split(';')[0] });
-      return VOICE.enqueue(VOICE.memoItem(r.id, blob, r.mime, r.started, ms)).then(function () { return blob; });
+      return VOICE.enqueue(VOICE.memoItem(r.id, blob, r.mime, r.started, ms, offS >= 2 ? '_screen-off-' + offS + 's' : ''))
+        .then(function () { return blob; });
     }).then(function (blob) {
       return VOICE.dropChunks(r.id).then(function () { return VOICE.kvDel('active'); }).then(function () {
         REC = null;
         note = blob.size ? 'Saved (' + dur(ms) + ').' : 'That recording came out empty - nothing to send.';
+        if (offS >= 2) {
+          show('About ' + offS + ' s of that recording is silent: the screen went off, and Android mutes the ' +
+               'microphone then. Claude will be told. Next time keep the screen on - the app holds it on by ' +
+               'itself, just don\'t press the power button.');
+        }
         kick(true);
       });
     }).catch(function (e) {
@@ -331,8 +341,25 @@
     (REC ? stop() : start()).then(function () { busy = false; }, function () { busy = false; });
   });
   signinBtn.addEventListener('click', function () { signIn(false); });
+  /* Android mutes a web page's microphone while the screen is off (found 2026-11-25:
+     a test went silent from 7 s to 22 s). The recorder keeps running, so measure
+     how long the page was hidden, warn as soon as it is back, and name the file so
+     the Master is told that stretch is silent. */
   document.addEventListener('visibilitychange', function () {
-    if (document.visibilityState !== 'visible') return;
+    if (document.visibilityState !== 'visible') {
+      if (REC && !REC.hiddenAt) REC.hiddenAt = Date.now();
+      return;
+    }
+    if (REC && REC.hiddenAt) {
+      var gap = Date.now() - REC.hiddenAt;
+      REC.hiddenMs += gap;
+      REC.hiddenAt = 0;
+      if (gap >= 2000) {
+        show('The screen was off for ' + Math.round(gap / 1000) + ' s and Android muted the microphone, so that ' +
+             'part is silent. Keep the screen on while recording - just don\'t press the power button.');
+        buzz([200, 100, 200]);
+      }
+    }
     if (REC) lockScreen();
     kick();
   });

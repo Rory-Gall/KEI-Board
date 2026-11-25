@@ -13,7 +13,7 @@
  * Sending = a Microsoft Graph upload session into the person's own OneDrive,
  * CONFIG.folder/<name>. The PC watcher picks it up from there.
  */
-var BUILD = '20261125-1037';
+var BUILD = '20261125-1245';
 var VOICE = (function () {
   'use strict';
 
@@ -142,8 +142,9 @@ var VOICE = (function () {
     if (mime.indexOf('aac') >= 0) return '.aac';
     return '.m4a';      /* what Android call recorders usually make; the PC decodes by content anyway */
   }
-  function memoItem(id, blob, mime, started, ms) {
-    return { id: id, name: id + extFor(mime), kind: 'memo', blob: blob, mime: mime, created: started,
+  /* suffix: e.g. "_screen-off-15s" - the PC tells the Master that part is silent */
+  function memoItem(id, blob, mime, started, ms, suffix) {
+    return { id: id, name: id + (suffix || '') + extFor(mime), kind: 'memo', blob: blob, mime: mime, created: started,
              ms: ms, state: 'waiting', tries: 0, lastError: '' };
   }
   function newMemoId(started) { return stamp(started) + '_memo_' + rid(); }

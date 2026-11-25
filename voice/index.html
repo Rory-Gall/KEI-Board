@@ -52,6 +52,11 @@
   #recent li.ok .state { color: var(--ok); }
   #recent li.wait .state { color: var(--wait); }
   #recent li.warn .state, #recent li.bad .state { color: var(--bad); }
+  /* while recording the page goes black: on the Pixel's OLED screen that uses almost no
+     battery, and the screen has to stay on (Android mutes the mic when it is off) */
+  body.recording { background: #000; }
+  body.recording header, body.recording #recentWrap, body.recording #status { opacity: .35; }
+  body.recording #rec { background: #000; color: #e6ecf0; }
   button:focus-visible { outline: 3px solid var(--rec); outline-offset: 3px; }
   [hidden] { display: none !important; }
 </style>
